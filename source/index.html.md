@@ -9,7 +9,6 @@ toc_footers:
   - <a href='https://hatio.in/'>Powered by Hatio Innovations</a>
 
 includes:
-  - errors
 
 search: true
 ---
@@ -604,3 +603,15 @@ signatures | [signature] | An array of signatures.
 
 
 # Interactive Console
+
+Interactive console of credence application provides limited functionality as of now. 
+Features available through interactive console are: 
+
+* HD root key generation 
+* Transaction Signing
+
+Interactive console can be accessed via a web browser at 
+
+* base_url/Sign 
+* base_url/RootKeyFunctions
+
