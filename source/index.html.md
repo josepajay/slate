@@ -251,8 +251,8 @@ This endpoint creates a new raw transaction from the provided UTXO's.
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-output | [outputs](### Verify transaction) | An array of outputs. Detailed description of output is given below | No
-input | [inputs] | An array of inputs. Detailed description of input is given below | No
+output | [[output]](#output) | An array of outputs. Detailed description of output is given below | No
+input | [[inputs]](#input) | An array of inputs. Detailed description of input is given below | No
 
 
 ### Output
@@ -262,7 +262,7 @@ Parameter | type | Description | Optional
 address | string | Bitcoin address to which funds are to be received | No
 amount | integer | Value of bitcoin to send in sathoshis | No
 
-Input
+### Input
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
@@ -271,9 +271,9 @@ amount | integer | Value of bitcoin to send in sathoshis | No
 vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
 txid | string | transaction id of the utxo | No
 redeemscript | string | redeemscript of the multisig address | No
-signing_keys | [signing_keys] | An array of signing_keys. Detailed description of signing_keys is given below | No
+signing_keys | [[signing_keys]](#signing-key) | An array of signing_keys. Detailed description of signing_keys is given below | No
 
-Signing Key
+### Signing Key
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
@@ -390,9 +390,9 @@ Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
 unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
 x_priv | string | Root private key | No
-sign_parts | List of sign parts | An array of sign parts. Detailed description of sign parts is given below | No
+sign_parts | [[sign_part]](#sign-parts) | An array of sign parts. Detailed description of sign parts is given below | No
 
-Sign Parts 
+### Sign Parts 
 
 Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
 
@@ -403,9 +403,9 @@ vout | integer | A single Bitcoin transaction can have many outputs. The vout fi
 address | string | Bitcoin address to which funds are to be received | No
 amount | integer | Value of bitcoin to send in sathoshis | No
 sign_hash | string | a hash of the data to be signed | No
-signing_keys | list of signing_keys | An array of signing_keys. Detailed description of signing_keys is given below | No
+signing_keys | [[signing_key]](#signing-key-for-transaction-sign) | An array of signing_keys. Detailed description of signing_keys is given below | No
 
-Signing Key
+### Signing Key for transaction sign
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
@@ -511,9 +511,9 @@ This endpoint verifies the signatures in the transaction.
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
 unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | List of sign parts | An array of sign parts. Detailed description of sign parts is given below | No
+sign_parts | [[sign_part]](#sign-parts-for-transaction-verify) | An array of sign parts. Detailed description of sign parts is given below | No
 
-Sign Parts 
+### Sign Parts for transaction verify
 
 Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
 
@@ -524,9 +524,9 @@ vout | integer | A single Bitcoin transaction can have many outputs. The vout fi
 address | string | Bitcoin address to which funds are to be received | No
 amount | integer | Value of bitcoin to send in sathoshis | No
 sign_hash | string | a hash of the data to be signed | No
-signing_keys | list of signing_keys | An array of signing_keys. Detailed description of signing_keys is given below | No
+signing_keys | [[signing_key]](#signing-key-for-transaction-verify) | An array of signing_keys. Detailed description of signing_keys is given below | No
 
-Signing Key
+### Signing Key for transaction verify
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
@@ -588,9 +588,9 @@ This endpoint packs the transaction for broadcasting to blockchain.
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
 unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | List of sign parts | An array of sign parts. Detailed description of sign parts is given below | No
+sign_parts | [[sign_part]](#sign-parts-for-transaction-pack) | An array of sign parts. Detailed description of sign parts is given below | No
 
-Sign Parts 
+### Sign Parts for transaction pack
 
 Description of keys present in sign_parts is given below
 
@@ -600,7 +600,7 @@ txid | string | transaction id of the utxo | No
 vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
 address | string | Bitcoin address to which funds are to be received | No
 amount | integer | Value of bitcoin to send in sathoshis | No
-signatures | List of signatures | An array of signatures.
+signatures | [signature] | An array of signatures.
 
 
 # Interactive Console
