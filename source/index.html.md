@@ -119,8 +119,8 @@ This endpoint creates a new HD root public private key pair from the provided mn
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-words | string | Mnemonic words from which HD root key is to be generated | no
-password | string | BIP39 Passphrase | yes
+words | string | Mnemonic words from which HD root key is to be generated | No
+password | string | BIP39 Passphrase | Yes
 
 
 ## Key Derivation
@@ -153,9 +153,9 @@ This endpoint derives a child public key at the provided derivation path
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
-x_pub | string | Root public key from which the new child at a specific path is to be derived | no
-uncompressed | boolean | It is an uncompressed public key| yes (default: false)
+path | string | BIP32 Derivation Path | No
+x_pub | string | Root public key from which the new child at a specific path is to be derived | No
+uncompressed | boolean | It is an uncompressed public key| Yes (default: false)
 
 # Bitcoin
 
@@ -277,7 +277,7 @@ signing_keys | [[signing_keys]](#bitcoin-signing-key) | An array of signing_keys
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 
 
@@ -431,7 +431,7 @@ signing_keys | [[signing_key]](#Bitcoin-signing-key-for-transaction-sign) | An a
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 
 
@@ -552,7 +552,7 @@ signing_keys | [[signing_key]](#bitcoin-signing-key-for-transaction-verify) | An
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 signature | string | Signature hex generated using the credence sign api | No
 verified | boolean | bool value indicating whether the signature is genuine | Yes
@@ -622,7 +622,7 @@ txid | string | transaction id of the utxo | No
 vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
 address | string | Bitcoin address to which funds are to be received | No
 amount | integer | Value of bitcoin to send in sathoshis | No
-signatures | [signature] | An array of signatures.
+signatures | [signature] | An array of signatures. | No
 
 
 
@@ -746,7 +746,7 @@ signing_keys | [[signing_keys]](#litecoin-signing-key) | An array of signing_key
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 
 
@@ -900,7 +900,7 @@ signing_keys | [[signing_key]](#litecoin-signing-key-for-transaction-sign) | An 
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 
 
@@ -1021,7 +1021,7 @@ signing_keys | [[signing_key]](#litecoin-signing-key-for-transaction-verify) | A
 
 Parameter | type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | no
+path | string | BIP32 Derivation Path | No
 child_pub | string | child public key at the provided derivation path | No
 signature | string | Signature hex generated using the credence sign api | No
 verified | boolean | bool value indicating whether the signature is genuine | Yes
@@ -1091,10 +1091,255 @@ txid | string | transaction id of the utxo | No
 vout | integer | A single litecoin transaction can have many outputs. The vout field specifies which output you want to spend | No
 address | string | litecoin address to which funds are to be received | No
 amount | integer | Value of litecoin to send in sathoshis | No
-signatures | [signature] | An array of signatures.
+signatures | [signature] | An array of signatures. | No
 
 
-# Interactive Console
+
+# Ethereum
+
+## Create Ethereum transaction
+
+> Request:
+
+```shell
+curl --request POST  \
+     --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/create  \
+     --header 'content-type: application/json' \
+     --data '{ "nonce": 16, "gas_price": 3000000000, "gas_limit": 21000, "to_address": "0bc91705c15418cd9ab7f0be8310339823a868f8", "value":8069720000000000 }'
+```
+
+> Request params expanded form: 
+
+```json
+{
+  "nonce": 16,
+  "gas_price": 3000000000,
+  "gas_limit": 21000,
+  "to_address": "0bc91705c15418cd9ab7f0be8310339823a868f8",
+  "value": 8069720000000000,
+  "data": "0"
+}
+```
+
+> Response:
+
+```json
+{ "unsigned_tx":"EA1084B2D05E00825208940BC91705C15418CD9AB7F0BE8310339823A868F8871CAB5E1A09700080038080" }
+```
+
+This endpoint creates a new raw transaction from the provided input parameters.
+
+### HTTP Request
+
+`POST /credenceapi/v1/ethereum/transaction/create`
+
+### Query Parameters
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+nonce | integer | In Ethereum, every transaction has a nonce. The nonce is the number of transactions sent from a given address. | No
+gas_limit | Integer | Gas limit refers to the maximum amount of gas you’re willing to spend on a particular transaction. | No
+gas_price | Integer | Gas is a unit of measuring the computational work of running transactions or smart contracts in the Ethereum network. | No
+to_address | string | Ethereum address to which funds are to be received | No
+value | Integer | Value of Ethereum to send in weis | No
+data | string | Input data of the message call (e.g., imagine you are trying to execute a setter method in your smart contract, the data field would contain the identifier of the setter method and the value that should be passed as parameter).| Yes
+
+
+## Sign Ethereum transaction
+
+> Request:
+
+```shell
+curl --request POST \
+  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/sign \
+  --header 'content-type: application/json' \
+  --data '{"unsigned_tx_hash":"24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f","x_priv":"xprv9s21ZrQH143K4PXD7GcNsvpKiuNzEkJjQXCck5GH8ec5oSpfLSrwTiwdB4ECN2GKWyFSEAkxu4TP3J9a1zx7UkxUp9XcLivYzRTB3e2tD46", "signing_keys":[{"child_pub":"0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f", "path":"m/0/0"}]}'
+```
+
+> Request params expanded form:
+
+```json
+{
+  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
+  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
+  "signing_keys":[{"child_pub":"0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f", "path":"m/0/0"}]}'
+}
+```
+
+> Response:
+
+```json
+{
+   "verified" : false,
+   "signing_keys" : [
+      {
+         "child_pub" : "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
+         "signature" : "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
+         "verified" : false,
+         "path" : "m/0/0"
+      }
+   ],
+   "unsigned_tx_hash" : "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f"
+}
+```
+
+This endpoint sign the transaction using the root private key provided.
+
+### HTTP Request
+
+`POST /credenceapi/v1/litecoin/transaction/sign`
+
+### Query Parameters
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+unsigned_tx_hash | string |  Keccak 256 hashed value of unsigned_tx in ethereum transaction create | No
+x_priv | string | Root private key | No
+signing_keys | [[signing_key]](#ethereum-signing-key-for-transaction-sign) | An array of sign parts. Detailed description of sign parts is given below | No
+
+
+### Ethereum Signing Key for transaction sign
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+path | string | BIP32 Derivation Path | No
+child_pub | string | child public key at the provided derivation path | No
+
+
+## Verify Ethereum transaction
+
+> Request:
+
+```shell
+curl --request POST \
+  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/verify \
+  --header 'content-type: application/json' \
+  --data '{
+  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
+  "verified": false,
+  "signing_keys": [
+    {
+      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
+      "path": "m/0/0",
+      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
+      "verified": false
+    }
+  ]
+}'
+```
+
+> Request params expanded form
+
+```json
+{
+  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
+  "signing_keys": [
+    {
+      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
+      "path": "m/0/0",
+      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
+    }
+  ]
+}
+
+```
+
+> Response:
+
+```json
+{
+  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
+  "verified": true,
+  "signing_keys": [
+    {
+      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
+      "path": "m/0/0",
+      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
+      "verified": true
+    }
+  ]
+}
+```
+
+This endpoint verifies the signatures in the transaction.
+
+### HTTP Request
+
+`POST /credenceapi/v1/ethereum/transaction/verify`
+
+### Query Parameters
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+unsigned_tx_hash | string |  Keccak 256 hashed value of unsigned_tx in ethereum transaction create | No
+signing_keys | [[signing_key]](#ethereum-signing-key-for-transaction-verify) | An array of sign parts. Detailed description of sign parts is given below | No
+
+### Ethereum Signing Key for transaction verify
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+path | string | BIP32 Derivation Path | No
+child_pub | string | child public key at the provided derivation path | No
+signature | string | Signature hex generated using the credence sign api | No
+
+## Pack Ethereum transaction
+
+> Request:
+
+```shell
+curl --request POST \
+  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/pack \
+  --header 'content-type: application/json' \
+  --data '{
+          "nonce": 1,
+          "gas_price": 3000000000,
+          "gas_limit": 21000,
+          "to_address": "b83bb5ddd846124bd837714d0e9862d0c43cddf7",
+          "value": 0,
+          "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729"
+        }'
+```
+> Request params expanded form:
+
+```json
+{
+  "nonce": 1,
+  "gas_price": 3000000000,
+  "gas_limit": 21000,
+  "to_address": "b83bb5ddd846124bd837714d0e9862d0c43cddf7",
+	"value": 0,
+	"signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729"
+}
+```
+
+> Response:
+
+```json
+{
+  "signed_tx": "F8630184B2D05E0082520894B83BB5DDD846124BD837714D0E9862D0C43CDDF7808029A01C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34BA03B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D367",
+  "verified": false
+}
+```
+
+This endpoint packs the transaction for broadcasting to blockchain.
+
+### HTTP Request
+
+`POST /credenceapi/v1/ethereum/transaction/pack`
+
+### Query Parameters
+
+Parameter | type | Description | Optional
+--------- | ---- | ----------- | --------
+nonce | integer | In Ethereum, every transaction has a nonce. The nonce is the number of transactions sent from a given address. | No
+gas_limit | Integer | Gas limit refers to the maximum amount of gas you’re willing to spend on a particular transaction. | No
+gas_price | Integer | Gas is a unit of measuring the computational work of running transactions or smart contracts in the Ethereum network. | No
+to_address | string | Ethereum address to which funds are to be received | No
+value | Integer | Value of Ethereum to send in weis | No
+data | string | Input data of the message call (e.g., imagine you are trying to execute a setter method in your smart contract, the data field would contain the identifier of the setter method and the value that should be passed as parameter).| Yes
+signature | string | Signature hex generated using the credence sign api | No
+
+<!-- # Interactive Console
 
 Interactive console of credence application provides limited functionality as of now. 
 Features available through interactive console are: 
@@ -1105,5 +1350,4 @@ Features available through interactive console are:
 Interactive console can be accessed via a web browser at 
 
 * base_url/Sign 
-* base_url/RootKeyFunctions
-
+* base_url/RootKeyFunctions -->
