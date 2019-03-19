@@ -1,4 +1,4 @@
-# Errors
+# Errors (Sample)
 
 The Custodian API uses the following error codes:
 
