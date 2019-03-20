@@ -15,20 +15,11 @@ search: true
 
 # Getting Started
 
-### What is an HD Wallet ?
+## Overview
 
-All Credence wallets are hierarchical deterministic wallets - also known as “HD Wallets”. HD Wallets are implemented using the bitcoin BIP32 standard. As such, Credence's HD Wallets are built from ‘keychains’ rather than from individual keys, and offer two distinct security and privacy enhancing features:
+Enterprise Multi-Signature Wallet is a High Security Solution to store Digital Assets and Crypto Currencies protected by the safety of multiple cryptographic keys and thereby greatly reducing the attack surface of a Single-Key storage. 
 
-* More secure backups
-
-Because keychains can be backed up with a single secret, a wallet can use many public keys all of which are maintained by a single backup key.
-
-* Blockchain Privacy
-
-With HD Wallets, applications can create new keys with every transaction such that no two transactions ever appear to come from the same wallet. This protects the wallet holder from revealing the true size of the wallet.
-
-
-### What does mMulti-Signature mean ?
+All Credence wallets are hierarchical deterministic wallets - also known as “HD Wallets”. HD Wallets are implemented using the bitcoin BIP32 standard. As such, Credence's HD Wallets are built from ‘keychains’ rather than from individual keys. Keychains can be backed up with a single secret, a wallet can use many public keys all of which are maintained by a single backup key.
 
 The primary advantage of multi-signature wallets is the ability for multiple machines and people to work together to approve a given transaction. Without multiple signatures on a transaction, all credentials to approve a transaction must reside with a single person on a machine. If that person, or machine is compromised by an attacker, all of your bitcoin can be taken.
 
@@ -36,21 +27,75 @@ Traditionally, it has been so difficult to secure these single person / single m
 
 Multi-signature wallets offer all the flexibility you would expect from a modern Bitcoin address without having to take your bitcoin offline. The Credence API enables you to use multi-signature features in your own applications so you can harness the full flexibility of multiple users, cosigners and state-of-the-art fraud detection services to protect against loss and theft.
 
-### Overview
 
-Credence provides a simple and robust API to integrate multi-signature technology into your existing bitcoin applications and services.
-Credence also provides simple web interfaces for key generation and transaction signing.
+## Account Setup (INCOMPLETE)
 
-The Credence enables the following operations:
+Before you begin, you need to set up an enterprise account by signing up at https://accounts-dev.coinome.com. Generate new APP_UID, APP_SECRET and CODE for use in every api call to Enterprise Wallet API.
 
-* HD root key generation 
-* Hierarchical Deterministic key derivation 
-* Root public key validation
-* Transaction creation
-* Transaction signing
-* Transaction packing
+# Wallet
 
-# HD Keys
+Before you can safely send or receive crypto assets using our product you need to set up a multi signature wallet.
+You will be asked to provide root public keys od BIP32 specification. In a typical 2/3 multi signature setup, User and Enterprise Wallet will hold one root private key. A backup key will be also required in case user looses his primary root private.
+ 
+TODO: Add more content about why you need 3 root keys. Educate user more about ecdsa keys.
+
+
+## Create Wallet
+
+
+```shell
+HTTP_METHOD=POST
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"public_keys": ["xpub661MyMwAqRbcFCpjo8ucHDkLWb8Ba9ahwP2jQa7eR8QgX6KXNNXq595uEA785XJS7NReNS1RyRe7zz7KFS6UZqHSwwdWEcnZExoNmo3T1q6"],"label": "mywallet"}'
+
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "11",
+		"type": "wallet",
+		"attributes": {
+			"id": 1,
+			"label": "mywallet",
+			"coin_id": 1,
+			"active": true
+		}
+	}
+}
+```
+
+This endpoint creates a new wallet.
+
+### HTTP Request
+
+`POST api/v1/:coin_name/wallets`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+public_key | String | Root public key from user | No 
+label | String | A name for the wallet | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
+
+
+Public key to be provided while wallet creation can be generated via our tool named Credence. <-- HYPERLINK or via any other root key generation services of his/her personal choice.
+
+If Root public key is generated via Credence, there are two choices by which this can be achived.
+
+  * Credence API for key generation
+  * Credence Desktop Application
+
+Key generation using Credence API is explained in [next section](#key-generation)
 
 ## Key Generation
 
@@ -73,7 +118,7 @@ curl --request GET \
 }
 ```
 
-This endpoint creates a new HD root public private key pair
+This endpoint in Credence creates a new HD root public private key pair. A set of 24 words - called Mnemonic words will be generated which is supposed to be kept safe or remembered by user. These words are equivalent to your private key since private keys can be derived from these set of words. Enterprise Wallet does not store this and cannot recover these words for you at any point.
 
 ### HTTP Request
 
@@ -85,9 +130,7 @@ Parameter | type | Description | Required
 --------- | ---- | ----------- | --------
 nil
 
-
-
-## Key Generation (providing mnemonic words and password)
+## Key Recovery
 
 > Request:
 
@@ -109,7 +152,9 @@ curl --request POST \
 }
 ```
 
-This endpoint creates a new HD root public private key pair from the provided mnemonic words and password
+This endpoint in Credence recovers public private key pair from the provided mnemonic words. This can be used in case user no longer remembers his private public key pairs. 
+
+This functionality is also available in Credence Desktop application.
 
 ### HTTP Request
 
@@ -123,165 +168,492 @@ words | string | Mnemonic words from which HD root key is to be generated | No
 password | string | BIP39 Passphrase | Yes
 
 
-## Key Derivation
-
-> Request:
+## Show Wallet  
 
 ```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/ckd/publickey \
-  --header 'content-type: application/json' \
-  --data '"{\r\n\t\"path\": \"m\/0\",\r\n\t\"x_pub\": \"xpub661MyMwAqRbcGWT7gYxcwtcn9BPkkyx65Q7eHz9ZpJ7a7XPpaWg7mwTPH7fg4iLGVCQxMavZdUS1K4gxeny821orD94DmGhzrRMdqJZuE3L\"\r\n}"'
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
 ```
 
-> Response:
+> The above command returns JSON structured like this:
 
 ```json
 {
-  "child_pub": "0380C25D30A63A758A1038B29CA939B80B223E0ED46C207892AB087730739151C3"
+	"data": {
+		"id": "11",
+		"type": "wallet",
+		"attributes": {
+			"id": 11,
+			"label": "mywallet",
+			"coin_id": 1,
+			"active": true,
+			"balance": {
+				"confirmed_balance": 0,
+				"unconfirmed_balance": 0,
+				"locked_balance": 0
+			}
+		}
+	}
 }
 ```
 
+This endpoint retrieves a specific wallet.
 
-This endpoint derives a child public key at the provided derivation path
 
 ### HTTP Request
 
-`POST /credenceapi/ckd/publickey`
+`GET api/v1/:coin_name/wallets/:id`
 
-### Query Parameters
+### URL Parameters
 
-Parameter | type | Description | Optional
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-x_pub | string | Root public key from which the new child at a specific path is to be derived | No
-uncompressed | boolean | It is an uncompressed public key| Yes (default: false)
+ID | Integer | The ID of the Wallet to retrieve | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
-# Bitcoin
-
-## Create Bitcoin transaction
-
-> Request:
+## List Wallet
 
 ```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/bitcoin/transaction/create \
-  --header 'content-type: application/json' \
-  --data '{"output":[{"address":"2NEcuEujgZm5scvQRamgevwipwAy1hBra7q","amount":5000},{"address":"2N7d6vbNbN4GrgaesXQ9TvVSrLLGxmGqCGN","amount":1118000}],"input":[{"vout":1,"txid":"af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e","address":"2NEcuEujgZm5scvQRamgevwipwAy1hBra7q","amount":1126500,"redeemscript":"522103d74a4a9f68cbdb5e1d50122a724e91684fba84e69e71f896a6040a8ac49dffa821021027b084c517102657fb5b64d48d1191205fe720c65d3063bb5087cad850abb62102cf64ede349777df5d274c9c74346c9f6f879109a8e455660ab64cde5f31e19c553ae","signing_keys":[{"child_pub":"03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8","path":"m/44/0/5/1/32"},{"child_pub":"021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6","path":"m/44/0/5/1/32"},{"child_pub":"02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5","path":"m/44/0/5/1/32"}]}]}'
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
 ```
 
-> Request params expanded form: 
+> The above command returns JSON structured like this:
 
 ```json
 {
-  "output": [
-    {
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": 5000
-    },
-    {
-      "address": "2N7d6vbNbN4GrgaesXQ9TvVSrLLGxmGqCGN",
-      "amount": 1118000
-    }
-  ],
-  "input": [
-    {
-      "vout": 1,
-      "txid": "af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e",
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": 1126500,
-      "redeemscript": "522103d74a4a9f68cbdb5e1d50122a724e91684fba84e69e71f896a6040a8ac49dffa821021027b084c517102657fb5b64d48d1191205fe720c65d3063bb5087cad850abb62102cf64ede349777df5d274c9c74346c9f6f879109a8e455660ab64cde5f31e19c553ae",
-      "signing_keys": [
-        {
-          "child_pub": "03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5",
-          "path": "m/44/0/5/1/32"
-        }
-      ]
-    }
-  ]
+	"data": [{
+		"id": "11",
+		"type": "wallet",
+		"attributes": {
+			"id": 11,
+			"label": "mywallet",
+			"coin_id": 1,
+			"active": true
+		}
+	}]
 }
 ```
 
-> Response:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "sign_parts": [
-    {
-      "txid": "af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e",
-      "vout": "1",
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": "1126500",
-      "sign_hash": "384F39B2DBE9D345747EB77E505537A670C79D22C9B662167BE06EDCB2551B89",
-      "signing_keys": [
-        {
-          "child_pub": "03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5",
-          "path": "m/44/0/5/1/32"
-        }
-      ]
-    }
-  ]
-}
-```
-
-This endpoint creates a new raw transaction from the provided UTXO's.
+This endpoint lists the entire wallets.
 
 ### HTTP Request
 
-`POST /credenceapi/v1/bitcoin/transaction/create`
+`GET  api/v1/:coin_name/wallets` 
+
+### URL Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
+
+#Address
+
+Addresses can be created against a wallet(which is explained in the previous section). API's related to address are explained below.
+
+## Create Address
+
+```shell
+HTTP_METHOD=POST
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/addresses
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "79",
+		"type": "address",
+		"attributes": {
+			"id": 79,
+			"wallet_id": 11,
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ",
+			"client_wallet_path": "m/44/0/1/0/79",
+			"service_provider_wallet_path": "m/44/0/1/0/79",
+			"arbitrator_wallet_path": "m/44/0/1/0/79",
+			"change": false
+		}
+	}
+}
+```
+
+This endpoint creates a new address under the wallet provied.
+
+### HTTP Request
+
+`POST /api/v1/:coin_name/wallets/:id/addresses`
 
 ### Query Parameters
 
-Parameter | type | Description | Optional
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-output | [[output]](#bitcoin-output) | An array of outputs. Detailed description of output is given below | No
-input | [[inputs]](#bitcoin-input) | An array of inputs. Detailed description of input is given below | No
+id | Integer | id of the wallet in which address has to be generated | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
 
-### Bitcoin Output
+## Show Address
 
-Parameter | type | Description | Optional
+```shell
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/addresses/79
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "79",
+		"type": "address",
+		"attributes": {
+			"id": 79,
+			"wallet_id": 11,
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ",
+			"client_wallet_path": "m/44/0/1/0/79",
+			"service_provider_wallet_path": "m/44/0/1/0/79",
+			"arbitrator_wallet_path": "m/44/0/1/0/79",
+			"change": false
+		}
+	}
+}
+```
+
+This endpoint shows details of an address.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/addresses/:id`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-address | string | Bitcoin address to which funds are to be received | No
-amount | integer | Value of bitcoin to send in sathoshis | No
+wallet_id | Integer | id of the wallet in which address has to be generated | No
+id | Integer | id of address to fetch | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
-### Bitcoin Input
 
-Parameter | type | Description | Optional
+
+## Latest Address 
+
+```shell
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/addresses/latest
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "79",
+		"type": "address",
+		"attributes": {
+			"id": 79,
+			"wallet_id": 11,
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ",
+			"client_wallet_path": "m/44/0/1/0/79",
+			"service_provider_wallet_path": "m/44/0/1/0/79",
+			"arbitrator_wallet_path": "m/44/0/1/0/79",
+			"change": false
+		}
+	}
+}
+```
+
+
+This endpoint shows details of the latest address generated for that wallet.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/addresses/latest`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-address | string | Bitcoin address to which funds are to be received | No
-amount | integer | Value of bitcoin to send in sathoshis | No
-vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-txid | string | transaction id of the utxo | No
-redeemscript | string | redeemscript of the multisig address | No
-signing_keys | [[signing_keys]](#bitcoin-signing-key) | An array of signing_keys. Detailed description of signing_keys is given below | No
+wallet_id | Integer | id of the wallet in which address has to be generated | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
-### Bitcoin Signing Key
 
-Parameter | type | Description | Optional
+## List Addresses
+
+```shell
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/addresses
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": [{
+		"id": "1",
+		"type": "address",
+		"attributes": {
+			"id": 1,
+			"wallet_id": 11,
+			"address": "2N87yzNRi69sNcMRfMRPiKyzek1vhuea9EG",
+			"client_wallet_path": "m/44/0/1/0/1",
+			"service_provider_wallet_path": "m/44/0/1/0/1",
+			"arbitrator_wallet_path": null,
+			"change": false
+		}
+	}, {
+		"id": "79",
+		"type": "address",
+		"attributes": {
+			"id": 79,
+			"wallet_id": 11,
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ",
+			"client_wallet_path": "m/44/0/1/0/79",
+			"service_provider_wallet_path": "m/44/0/1/0/79",
+			"arbitrator_wallet_path": "m/44/0/1/0/79",
+			"change": false
+		}
+	}]
+}
+```
+
+
+This endpoint lists all addresses generated for that wallet.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/addresses`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
+wallet_id | Integer | id of the wallet in which address has to be generated | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
 
-## Sign Bitcoin transaction
+
+# Deposits
+
+Users can receive funds after setting up wallet and address.  
+
+## List Deposits
+
+```shell
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/deposits
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": [{
+		"id": "29",
+		"type": "deposit",
+		"attributes": {
+			"id": 29,
+			"wallet_id": 11,
+			"txid": "4e6a29da49d2fc453b8ac68189d14c8a013b61ea2f670b870e19a7a9f5ff0e0e",
+			"vout": 0,
+			"amount": 20000000,
+			"block_height": 1449842,
+			"block_hash": "00000000000001397c0f01bbcdac235fc14551e1b97cbb5357ea1a10ce49a54a",
+			"confirmations": 5,
+			"block_time": "2018-12-28T06:31:23.000Z",
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ"
+		}
+	}]
+}
+```
+
+This endpoint lists all deposits for a specific wallet.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/deposits`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
+
+
+
+## Show Deposit
+
+```shell
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/deposits/15
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
+
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "29",
+		"type": "deposit",
+		"attributes": {
+			"id": 29,
+			"wallet_id": 11,
+			"txid": "4e6a29da49d2fc453b8ac68189d14c8a013b61ea2f670b870e19a7a9f5ff0e0e",
+			"vout": 0,
+			"amount": 20000000,
+			"block_height": 1449842,
+			"block_hash": "00000000000001397c0f01bbcdac235fc14551e1b97cbb5357ea1a10ce49a54a",
+			"confirmations": 5,
+			"block_time": "2018-12-28T06:31:23.000Z",
+			"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ"
+		}
+	}
+}
+```
+
+This endpoint returns a specific deposit details.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/deposits/:deposit_id`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+deposit_id | Integer | ID of deposit to be retrieved | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
+
+
+# Withdrawals
+
+ADD CONTENT HERE
+
+## Create Withdrawal
+
+```shell
+HTTP_METHOD=POST
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/withdrawals
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"recipient_address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount": 63750,"fee_per_byte": 10}'  
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+	"data": {
+		"id": "78",
+		"type": "withdrawal_create",
+		"attributes": {
+			"id": 78,
+			"wallet_id": 11,
+			"amount": 60000,
+			"transaction_data": {
+				"unsigned_tx": "020000000001010E0EFFF5A9A7190E870B672FEA613B018A4CD18981C68A3B45FCD249DA296A4E00000000232200204FC5F723B5D15ED8ABCFF2E5758BCAF6E41A1744A83592B63DF62469C7DA5A1AFEFFFFFF0360EA00000000000017A914B762ABDE8B64CC2074CCF2759F81AFE5360D6115870F0000000000000017A91444B499EC242F7A587738F5CF598665526A9D5F3487952F30010000000017A914DD8E5B5395250C0ABE330ED09FA3C5D75A6F6810870000000000",
+				"sign_parts": [{
+					"txid": "4e6a29da49d2fc453b8ac68189d14c8a013b61ea2f670b870e19a7a9f5ff0e0e",
+					"vout": "0",
+					"address": "2N4mzKaPLDqVw5isPQRAY8kYg41Jw3KvLiJ",
+					"amount": "20000000",
+					"sign_hash": "9F5F6A356876C9CB4E395F943FF1236B8050A849693E41B0DAA4A5E9E3E6747A",
+					"signing_keys": [{
+						"child_pub": "03364F18A5373D6FC5FD2E190F4DAF2E493A1290300752547C735EDBE0B02FAEBA",
+						"path": "m/44/0/1/0/79"
+					}, {
+						"child_pub": "026AABA63A18991E796474781DBA159E7153C8BD3219F7B748DF6F8FF597FFC2C4",
+						"path": "m/44/0/1/0/79"
+					}]
+				}]
+			}
+		}
+	}
+}
+```
+
+This endpoint creates a new withdrawal from the user's wallet.
+
+### HTTP Request
+
+`POST /api/v1/:coin_name/wallets/:wallet_id/withdrawals`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+recipient_address | String | address to which the withdrawal should be made | No
+amount | Integer | value of bitcoin in sathoshi's | No
+fee_per_byte | Integer | fee ( in sathoshi's ) to be spend per byte of the bitcoin transaction
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
+
+
+This api response contains transaction_data which will be used as an input to [sign transaction api](#sign-transaction) in Credence. (To sign transaction on behalf of user, using his private key)  
+
+## Sign Transaction
 
 > Request:
 
@@ -314,60 +686,6 @@ curl --request POST \
 }'
 ```
 
-> Request params expanded form:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        },
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        }
-      ]
-    }
-  ]
-}
-```
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        },
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        }
-      ]
-    }
-  ]
-}
-```
-
 > Response:
 
 ```json
@@ -400,954 +718,177 @@ curl --request POST \
 }
 ```
 
-This endpoint sign the transaction using the root private key provided.
+This endpoint in Credence, sign the transaction using the root private key provided. 
+
+After creating a transaction in Enterprise Wallet, it creates a raw transaction without signatures. If user has a 2/3 configuration multi signature wallet, two signatures are required for the transaction to be sucessfully transamitted to blockchain. Out of the three keys, Enterprise Wallet system holds one of them and the rest is owned by user. User can sign the transaction created using his private key via Credence Api. This action can also be performed using Credence desktop application.
 
 ### HTTP Request
 
-`POST /credenceapi/v1/bitcoin/transaction/sign`
+`POST /credenceapi/v1/:coin_name/transaction/sign`
 
 ### Query Parameters
 
-Parameter | type | Description | Optional
+In the response of transaction create API in Enterprise Wallet, a key named transaction_data is present. Private key of the user merged with this transaction_data creates the parameters for Credence transaction sign.
+
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-x_priv | string | Root private key | No
-sign_parts | [[sign_part]](#bitcoin-sign-parts) | An array of sign parts. Detailed description of sign parts is given below | No
+coin_name | String | Name of the coin | No 
+x_priv | String | Root private key | No
+unsigned_tx | String | Raw transaction hex, a value in output of transaction create | No
+sign_parts | [sign_part] | An array of sign parts. | No
 
-### Bitcoin Sign Parts 
-
-Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | Bitcoin address to which funds are to be received | No
-amount | integer | Value of bitcoin to send in sathoshis | No
-sign_hash | string | a hash of the data to be signed | No
-signing_keys | [[signing_key]](#Bitcoin-signing-key-for-transaction-sign) | An array of signing_keys. Detailed description of signing_keys is given below | No
-
-### Bitcoin Signing Key for transaction sign
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-
-
-## Verify Bitcoin transaction
-
-> Request:
+## Finalize Withdrawal
 
 ```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/bitcoin/transaction/verify \
-  --header 'content-type: application/json' \
-  --data '{"unsigned_tx":"020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000","verified":false,"sign_parts":[{"txid":"7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b","vout":0,"address":"2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount":"1180000","sign_hash":"58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099","signing_keys":[{"child_pub":"022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882","path":"m/44/0/3/0/3","signature":"304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801","verified":false},{"child_pub":"03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091","path":"m/44/0/3/0/3","signature":null,"verified":false},{"child_pub":"035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D","path":"m/44/0/3/0/3","signature":null,"verified":false}]}]}'
+HTTP_METHOD=POST
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/withdrawals/78/finalize
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+note: use signed txn data from credence interface as client_signed_txn
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"client_signed_txn": "{\"unsigned_tx\":\"02000000000101B7938D3A068467A4CAAE04871DE84C864B0808D8C4FA8E41F8254E89FEBC7D880100000023220020741FAD10CE1271F53614008BE1D7A69EC5AF10E46158C1881D3510824147DD6DFEFFFFFF0206F900000000000017A91444B499EC242F7A587738F5CF598665526A9D5F34874E1010000000000017A91418282DF53C7E947F4F3E8FC4D62A6C588BBB10F1870000000000\",\"verified\":false,\"sign_parts\":[{\"txid\":\"887dbcfe894e25f8418efac4d808084b864ce81d8704aecaa46784063a8d93b7\",\"vout\":1,\"address\":\"2N3ptgmvmUVywNH7RDm5yu5BzquD9GdQtL8\",\"amount\":\"1120000\",\"sign_hash\":\"C7D5D0CCD7FF90DA9A23CEA5B383771574E6B3A870D5B06ED59FF3DCB9869782\",\"signing_keys\":[{\"child_pub\":\"03208251CA155FB6397D99C23148ABCEEFD0A4F7BDAD0CFAF3FBD0E6C9EA40A9F3\",\"path\":\"m/44/0/11/0/51\",\"signature\":\"3045022100F52FB9785081DBB24D260F1D7F4B34A137706145C554B34DAA3B235FDAA21F35022058BC5B0F6D88C436D74D5AD54F0343CF43D727C4F17ACEDB91A904BED355B89401\",\"verified\":false},{\"child_pub\":\"026E29F28DA14804B4895A235409F2E01806402E4C7BA8D8D1285C858C6AADEDC8\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false},{\"child_pub\":\"02B43CD873507D28BD2F2360E6A7320DC924FD6DE22937915C6E1E49651FEC549F\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false}]}]}"
+    }'
 ```
 
-> Request params expanded form
+> The above command returns JSON structured like this:
 
 ```json
 {
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "verified": false,
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": "1180000",
-      "sign_hash": "58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099",
-      "signing_keys": [
-        {
-          "child_pub": "022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882",
-          "path": "m/44/0/3/0/3",
-          "signature": "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801",
-          "verified": false
-        },
-        {
-          "child_pub": "03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        },
-        {
-          "child_pub": "035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        }
-      ]
-    }
-  ]
+	"data": {
+		"id": "78",
+		"type": "withdrawal_finalize",
+		"attributes": {
+			"id": 78,
+			"txid": "44f8ea3284b78cd7d4e9e72fa3a7d7a4194738dd943b556561cab386516b88cf",
+			"amount": 60000,
+			"fee": 4860
+		}
+	}
 }
 ```
 
-> Response:
-
-```json
-{
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "verified": false,
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": "1180000",
-      "sign_hash": "58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099",
-      "signing_keys": [
-        {
-          "child_pub": "022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882",
-          "path": "m/44/0/3/0/3",
-          "signature": "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801",
-          "verified": true
-        },
-        {
-          "child_pub": "03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        },
-        {
-          "child_pub": "035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-This endpoint verifies the signatures in the transaction.
+This endpoint creates a new withdrawal from the user's wallet.
 
 ### HTTP Request
 
-`POST /credenceapi/v1/bitcoin/transaction/verify`
+`POST /api/v1/:coin_name/wallets/:wallet_id/withdrawals/:withdrawal_id/finalize`
 
 ### Query Parameters
 
-Parameter | type | Description | Optional
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | [[sign_part]](#bitcoin-sign-parts-for-transaction-verify) | An array of sign parts. Detailed description of sign parts is given below | No
-
-### Bitcoin Sign Parts for transaction verify
-
-Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | Bitcoin address to which funds are to be received | No
-amount | integer | Value of bitcoin to send in sathoshis | No
-sign_hash | string | a hash of the data to be signed | No
-signing_keys | [[signing_key]](#bitcoin-signing-key-for-transaction-verify) | An array of signing_keys. Detailed description of signing_keys is given below | No
-
-### Bitcoin Signing Key for transaction verify
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-signature | string | Signature hex generated using the credence sign api | No
-verified | boolean | bool value indicating whether the signature is genuine | Yes
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+withdrawal_id | Integer | ID of withdrawal to be finalized | No
+client_signed_txn | JSON | Response of [sign transaction api](#sign-transaction) from Credence | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
 
 
-## Pack Bitcoin transaction
 
-> Request:
+
+## List Withdrawals
 
 ```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/bitcoin/transaction/pack \
-  --header 'content-type: application/json' \
-  --data '{"unsigned_tx":"020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000","sign_parts":[{"txid":"7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b","vout":0,"address":"2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount":1180000,"signatures":["304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8","3045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639"],"redeemscript":"5221022b05ddc44d26ca9985978aa00d494eeedb49fb723faa2b30e7590e9b8c6bd8822103fdb02757226e4027c43d06df62c3f19c2d4dea802f743b1a35bec03c9aeff09121035d48fc4c577bf60e6fb46b00bd7d1759ad1020a5c25fba93a54a01dee3f1270d53ae"}]}'
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/withdrawals
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
 ```
-> Request params expanded form:
+
+> The above command returns JSON structured like this:
 
 ```json
 {
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": 1180000,
-      "signatures": [
-        "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8",
-        "3045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639"
-      ],
-      "redeemscript": "5221022b05ddc44d26ca9985978aa00d494eeedb49fb723faa2b30e7590e9b8c6bd8822103fdb02757226e4027c43d06df62c3f19c2d4dea802f743b1a35bec03c9aeff09121035d48fc4c577bf60e6fb46b00bd7d1759ad1020a5c25fba93a54a01dee3f1270d53ae"
-    }
-  ]
+	"data": [{
+		"id": "78",
+		"type": "withdrawal",
+		"attributes": {
+			"id": 78,
+			"wallet_id": 11,
+			"txid": "44f8ea3284b78cd7d4e9e72fa3a7d7a4194738dd943b556561cab386516b88cf",
+			"recipient_address": "2N9xsrCHy6gRh4QjiRT1NQwLLd9rJKVWHEG",
+			"amount": 60000,
+			"fee": 4860,
+			"block_height": null,
+			"block_hash": null,
+			"confirmations": null,
+			"fee_per_byte": 10,
+			"status": "success"
+		}
+	}]
 }
 ```
 
-> Response:
-
-```json
-{
-  "signed_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD87040046304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8473045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639695221022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD8822103FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF09121035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D53AE00000000",
-  "verified": false
-}
-```
-
-This endpoint packs the transaction for broadcasting to blockchain.
+This endpoint lists all withdrawal for a specific wallet.
 
 ### HTTP Request
 
-`POST /credenceapi/v1/bitcoin/transaction/pack`
+`GET /api/v1/:coin_name/wallets/:wallet_id/withdrawals`
 
 ### Query Parameters
 
-Parameter | type | Description | Optional
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | [[sign_part]](#bitcoin-sign-parts-for-transaction-pack) | An array of sign parts. Detailed description of sign parts is given below | No
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
-### Bitcoin Sign Parts for transaction pack
-
-Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single Bitcoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | Bitcoin address to which funds are to be received | No
-amount | integer | Value of bitcoin to send in sathoshis | No
-signatures | [signature] | An array of signatures. | No
-
-
-
-# Litecoin
-
-## Create Litecoin transaction
-
-> Request:
+## Show Withdrawals
 
 ```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/litecoin/transaction/create \
-  --header 'content-type: application/json' \
-  --data '{"output":[{"address":"2NEcuEujgZm5scvQRamgevwipwAy1hBra7q","amount":5000},{"address":"2N7d6vbNbN4GrgaesXQ9TvVSrLLGxmGqCGN","amount":1118000}],"input":[{"vout":1,"txid":"af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e","address":"2NEcuEujgZm5scvQRamgevwipwAy1hBra7q","amount":1126500,"redeemscript":"522103d74a4a9f68cbdb5e1d50122a724e91684fba84e69e71f896a6040a8ac49dffa821021027b084c517102657fb5b64d48d1191205fe720c65d3063bb5087cad850abb62102cf64ede349777df5d274c9c74346c9f6f879109a8e455660ab64cde5f31e19c553ae","signing_keys":[{"child_pub":"03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8","path":"m/44/0/5/1/32"},{"child_pub":"021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6","path":"m/44/0/5/1/32"},{"child_pub":"02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5","path":"m/44/0/5/1/32"}]}]}'
+HTTP_METHOD=GET
+HOST=https://custodian-staging.coinome.com
+URI=/api/v1/bitcoin/wallets/11/withdrawals/78
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
+CONTENT_TYPE=application/json
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
 ```
 
-> Request params expanded form: 
+> The above command returns JSON structured like this:
 
 ```json
 {
-  "output": [
-    {
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": 5000
-    },
-    {
-      "address": "2N7d6vbNbN4GrgaesXQ9TvVSrLLGxmGqCGN",
-      "amount": 1118000
-    }
-  ],
-  "input": [
-    {
-      "vout": 1,
-      "txid": "af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e",
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": 1126500,
-      "redeemscript": "522103d74a4a9f68cbdb5e1d50122a724e91684fba84e69e71f896a6040a8ac49dffa821021027b084c517102657fb5b64d48d1191205fe720c65d3063bb5087cad850abb62102cf64ede349777df5d274c9c74346c9f6f879109a8e455660ab64cde5f31e19c553ae",
-      "signing_keys": [
-        {
-          "child_pub": "03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5",
-          "path": "m/44/0/5/1/32"
-        }
-      ]
-    }
-  ]
+	"data": {
+		"id": "78",
+		"type": "withdrawal",
+		"attributes": {
+			"id": 78,
+			"wallet_id": 11,
+			"txid": "44f8ea3284b78cd7d4e9e72fa3a7d7a4194738dd943b556561cab386516b88cf",
+			"recipient_address": "2N9xsrCHy6gRh4QjiRT1NQwLLd9rJKVWHEG",
+			"amount": 60000,
+			"fee": 4860,
+			"block_height": null,
+			"block_hash": null,
+			"confirmations": null,
+			"fee_per_byte": 10,
+			"status": "success"
+		}
+	}
 }
 ```
 
-> Response:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "sign_parts": [
-    {
-      "txid": "af5ccd91968c5d424ca2dc8c574554e0938a98e5c928cbd7948cd2f38eeb3d7e",
-      "vout": "1",
-      "address": "2NEcuEujgZm5scvQRamgevwipwAy1hBra7q",
-      "amount": "1126500",
-      "sign_hash": "384F39B2DBE9D345747EB77E505537A670C79D22C9B662167BE06EDCB2551B89",
-      "signing_keys": [
-        {
-          "child_pub": "03D74A4A9F68CBDB5E1D50122A724E91684FBA84E69E71F896A6040A8AC49DFFA8",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "021027B084C517102657FB5B64D48D1191205FE720C65D3063BB5087CAD850ABB6",
-          "path": "m/44/0/5/1/32"
-        },
-        {
-          "child_pub": "02CF64EDE349777DF5D274C9C74346C9F6F879109A8E455660AB64CDE5F31E19C5",
-          "path": "m/44/0/5/1/32"
-        }
-      ]
-    }
-  ]
-}
-```
-
-This endpoint creates a new raw transaction from the provided UTXO's.
+This endpoint retrieves a specific withdrawal.
 
 ### HTTP Request
 
-`POST /credenceapi/v1/litecoin/transaction/create`
+`GET /api/v1/:coin_name/wallets/:wallet_id/withdrawals/:withdrawal_id`
 
 ### Query Parameters
 
-Parameter | type | Description | Optional
+Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
-output | [[output]](#litecoin-output) | An array of outputs. Detailed description of output is given below | No
-input | [[inputs]](#litecoin-input) | An array of inputs. Detailed description of input is given below | No
-
-
-### Litecoin Output
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-address | string | litecoin address to which funds are to be received | No
-amount | integer | Value of litecoin to send in sathoshis | No
-
-### Litecoin Input
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-address | string | litecoin address to which funds are to be received | No
-amount | integer | Value of litecoin to send in sathoshis | No
-vout | integer | A single litecoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-txid | string | transaction id of the utxo | No
-redeemscript | string | redeemscript of the multisig address | No
-signing_keys | [[signing_keys]](#litecoin-signing-key) | An array of signing_keys. Detailed description of signing_keys is given below | No
-
-### Litecoin Signing Key
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-
-
-## Sign Litecoin transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/litecoin/transaction/sign \
-  --header 'content-type: application/json' \
-  --data '{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        },
-       {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        }
-      ]
-    }
-  ]
-}'
-```
-
-> Request params expanded form:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        },
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        }
-      ]
-    }
-  ]
-}
-```
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        },
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0"
-        }
-      ]
-    }
-  ]
-}
-```
-
-> Response:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "verified": false,
-  "sign_parts": [
-    {
-      "txid": "",
-      "vout": 0,
-      "address": "",
-      "amount": "",
-      "sign_hash": "185c0be5263dce5b4bb50a047973c1b6272bfbd0103a89444597dc40b248ee7c",
-      "signing_keys": [
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0",
-          "signature": "304402204F26B272ACDDDA6F9A848D453A202AABC3942A8758034CB9BCFE2C78BC242DD3022009938278FE2C477D99F7D0AE0EAF8861CB88F7C799E294DAD4DD71FDD67D816F01",
-          "verified": false
-        },
-        {
-          "child_pub": "032fd4a01886eda61253c2038e22fa1f6cad2a1a0b407795c4712c01703581ff31",
-          "path": "m/0/0/0",
-          "signature": "304402204F26B272ACDDDA6F9A848D453A202AABC3942A8758034CB9BCFE2C78BC242DD3022009938278FE2C477D99F7D0AE0EAF8861CB88F7C799E294DAD4DD71FDD67D816F01",
-          "verified": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-This endpoint sign the transaction using the root private key provided.
-
-### HTTP Request
-
-`POST /credenceapi/v1/litecoin/transaction/sign`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-x_priv | string | Root private key | No
-sign_parts | [[sign_part]](#litecoin-sign-parts) | An array of sign parts. Detailed description of sign parts is given below | No
-
-### Litecoin Sign Parts 
-
-Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single litecoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | litecoin address to which funds are to be received | No
-amount | integer | Value of litecoin to send in sathoshis | No
-sign_hash | string | a hash of the data to be signed | No
-signing_keys | [[signing_key]](#litecoin-signing-key-for-transaction-sign) | An array of signing_keys. Detailed description of signing_keys is given below | No
-
-### Litecoin Signing Key for transaction sign
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-
-
-## Verify Litecoin transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/litecoin/transaction/verify \
-  --header 'content-type: application/json' \
-  --data '{"unsigned_tx":"020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000","verified":false,"sign_parts":[{"txid":"7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b","vout":0,"address":"2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount":"1180000","sign_hash":"58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099","signing_keys":[{"child_pub":"022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882","path":"m/44/0/3/0/3","signature":"304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801","verified":false},{"child_pub":"03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091","path":"m/44/0/3/0/3","signature":null,"verified":false},{"child_pub":"035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D","path":"m/44/0/3/0/3","signature":null,"verified":false}]}]}'
-```
-
-> Request params expanded form
-
-```json
-{
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "verified": false,
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": "1180000",
-      "sign_hash": "58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099",
-      "signing_keys": [
-        {
-          "child_pub": "022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882",
-          "path": "m/44/0/3/0/3",
-          "signature": "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801",
-          "verified": false
-        },
-        {
-          "child_pub": "03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        },
-        {
-          "child_pub": "035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-> Response:
-
-```json
-{
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "verified": false,
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": "1180000",
-      "sign_hash": "58C1FEFE8185B1A9BD5CF1DBFABA25251A80DC7DC537F90DBC060600E3A70099",
-      "signing_keys": [
-        {
-          "child_pub": "022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD882",
-          "path": "m/44/0/3/0/3",
-          "signature": "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD801",
-          "verified": true
-        },
-        {
-          "child_pub": "03FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF091",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        },
-        {
-          "child_pub": "035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D",
-          "path": "m/44/0/3/0/3",
-          "signature": null,
-          "verified": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-This endpoint verifies the signatures in the transaction.
-
-### HTTP Request
-
-`POST /credenceapi/v1/litecoin/transaction/verify`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | [[sign_part]](#litecoin-sign-parts-for-transaction-verify) | An array of sign parts. Detailed description of sign parts is given below | No
-
-### Litecoin Sign Parts for transaction verify
-
-Sign Parts is present in output of transaction create api. Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single litecoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | litecoin address to which funds are to be received | No
-amount | integer | Value of litecoin to send in sathoshis | No
-sign_hash | string | a hash of the data to be signed | No
-signing_keys | [[signing_key]](#litecoin-signing-key-for-transaction-verify) | An array of signing_keys. Detailed description of signing_keys is given below | No
-
-### Litecoin Signing Key for transaction verify
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-signature | string | Signature hex generated using the credence sign api | No
-verified | boolean | bool value indicating whether the signature is genuine | Yes
-
-
-
-## Pack Litecoin transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/litecoin/transaction/pack \
-  --header 'content-type: application/json' \
-  --data '{"unsigned_tx":"020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000","sign_parts":[{"txid":"7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b","vout":0,"address":"2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount":1180000,"signatures":["304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8","3045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639"],"redeemscript":"5221022b05ddc44d26ca9985978aa00d494eeedb49fb723faa2b30e7590e9b8c6bd8822103fdb02757226e4027c43d06df62c3f19c2d4dea802f743b1a35bec03c9aeff09121035d48fc4c577bf60e6fb46b00bd7d1759ad1020a5c25fba93a54a01dee3f1270d53ae"}]}'
-```
-> Request params expanded form:
-
-```json
-{
-  "unsigned_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD870000000000",
-  "sign_parts": [
-    {
-      "txid": "7d529195427b4b3dd03060341688d44ec7f49f8801255312bc7237a1f15f961b",
-      "vout": 0,
-      "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
-      "amount": 1180000,
-      "signatures": [
-        "304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8",
-        "3045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639"
-      ],
-      "redeemscript": "5221022b05ddc44d26ca9985978aa00d494eeedb49fb723faa2b30e7590e9b8c6bd8822103fdb02757226e4027c43d06df62c3f19c2d4dea802f743b1a35bec03c9aeff09121035d48fc4c577bf60e6fb46b00bd7d1759ad1020a5c25fba93a54a01dee3f1270d53ae"
-    }
-  ]
-}
-```
-
-> Response:
-
-```json
-{
-  "signed_tx": "020000000001011B965FF1A13772BC12532501889FF4C74ED48816346030D03D4B7B429591527D0000000023220020B856A5625ECD4B3936429E40B17699D9A027179AC76A57A6735251B24F98A220FEFFFFFF02F04902000000000017A914C9A38D2C82C5ADE7BCB59B038AE581F0904310B487EEA20F000000000017A914510685731D87E01EAB05A74AAEF7317537872FDD87040046304402203D75C815B653BFB77E813C0B01782A045121D5B9EB645805BD4379163AC905AD0220553D1A55306D147C9BF8A70A08ECEA81B65EC88E62844BA6CB2C956279269CD8473045022100D01DD4BE2DBC232215C6B64EC18705B7D1C1063E7997C38D60D64EA61CFF715C02206085E7A64E63D38DFC912841010967972DD912B2153816AB070EF69569D2D639695221022B05DDC44D26CA9985978AA00D494EEEDB49FB723FAA2B30E7590E9B8C6BD8822103FDB02757226E4027C43D06DF62C3F19C2D4DEA802F743B1A35BEC03C9AEFF09121035D48FC4C577BF60E6FB46B00BD7D1759AD1020A5C25FBA93A54A01DEE3F1270D53AE00000000",
-  "verified": false
-}
-```
-
-This endpoint packs the transaction for broadcasting to blockchain.
-
-### HTTP Request
-
-`POST /credenceapi/v1/litecoin/transaction/pack`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-unsigned_tx | string | Raw transaction hex, a value in output of transaction create | No
-sign_parts | [[sign_part]](#litecoin-sign-parts-for-transaction-pack) | An array of sign parts. Detailed description of sign parts is given below | No
-
-### Litecoin Sign Parts for transaction pack
-
-Description of keys present in sign_parts is given below
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-txid | string | transaction id of the utxo | No
-vout | integer | A single litecoin transaction can have many outputs. The vout field specifies which output you want to spend | No
-address | string | litecoin address to which funds are to be received | No
-amount | integer | Value of litecoin to send in sathoshis | No
-signatures | [signature] | An array of signatures. | No
-
-
-
-# Ethereum
-
-## Create Ethereum transaction
-
-> Request:
-
-```shell
-curl --request POST  \
-     --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/create  \
-     --header 'content-type: application/json' \
-     --data '{ "nonce": 16, "gas_price": 3000000000, "gas_limit": 21000, "to_address": "0bc91705c15418cd9ab7f0be8310339823a868f8", "value":8069720000000000 }'
-```
-
-> Request params expanded form: 
-
-```json
-{
-  "nonce": 16,
-  "gas_price": 3000000000,
-  "gas_limit": 21000,
-  "to_address": "0bc91705c15418cd9ab7f0be8310339823a868f8",
-  "value": 8069720000000000,
-  "data": "0"
-}
-```
-
-> Response:
-
-```json
-{ "unsigned_tx":"EA1084B2D05E00825208940BC91705C15418CD9AB7F0BE8310339823A868F8871CAB5E1A09700080038080" }
-```
-
-This endpoint creates a new raw transaction from the provided input parameters.
-
-### HTTP Request
-
-`POST /credenceapi/v1/ethereum/transaction/create`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-nonce | integer | In Ethereum, every transaction has a nonce. The nonce is the number of transactions sent from a given address. | No
-gas_limit | Integer | Gas limit refers to the maximum amount of gas you’re willing to spend on a particular transaction. | No
-gas_price | Integer | Gas is a unit of measuring the computational work of running transactions or smart contracts in the Ethereum network. | No
-to_address | string | Ethereum address to which funds are to be received | No
-value | Integer | Value of Ethereum to send in weis | No
-data | string | Input data of the message call (e.g., imagine you are trying to execute a setter method in your smart contract, the data field would contain the identifier of the setter method and the value that should be passed as parameter).| Yes
-
-
-## Sign Ethereum transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/sign \
-  --header 'content-type: application/json' \
-  --data '{"unsigned_tx_hash":"24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f","x_priv":"xprv9s21ZrQH143K4PXD7GcNsvpKiuNzEkJjQXCck5GH8ec5oSpfLSrwTiwdB4ECN2GKWyFSEAkxu4TP3J9a1zx7UkxUp9XcLivYzRTB3e2tD46", "signing_keys":[{"child_pub":"0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f", "path":"m/0/0"}]}'
-```
-
-> Request params expanded form:
-
-```json
-{
-  "unsigned_tx": "020000000001017E3DEB8EF3D28C94D7CB28C9E5988A93E05445578CDCA24C425D8C9691CD5CAF0100000023220020D1D2A8F19DFA12223B5B2F4C842DC033678EED6BAC8F284361E40ED90AAC6668FEFFFFFF02881300000000000017A914EA7424896B39239C97994EDF192A7D0766A9515D87300F11000000000017A9149DB50405A7DC6178F1AFFDE474E18C2D156CCA41870000000000",
-  "x_priv": "xprv9s21ZrQH143K42NeaXRcakg3b9ZGMXEEiBC3VbjxFxabEj4g2yMsE98uRpVP3zkdA6F6Nrz8yfXNZRxnWqZw8ckPJokEyzAgv6jEz3Ff7GS",
-  "signing_keys":[{"child_pub":"0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f", "path":"m/0/0"}]}'
-}
-```
-
-> Response:
-
-```json
-{
-   "verified" : false,
-   "signing_keys" : [
-      {
-         "child_pub" : "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
-         "signature" : "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
-         "verified" : false,
-         "path" : "m/0/0"
-      }
-   ],
-   "unsigned_tx_hash" : "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f"
-}
-```
-
-This endpoint sign the transaction using the root private key provided.
-
-### HTTP Request
-
-`POST /credenceapi/v1/litecoin/transaction/sign`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-unsigned_tx_hash | string |  Keccak 256 hashed value of unsigned_tx in ethereum transaction create | No
-x_priv | string | Root private key | No
-signing_keys | [[signing_key]](#ethereum-signing-key-for-transaction-sign) | An array of sign parts. Detailed description of sign parts is given below | No
-
-
-### Ethereum Signing Key for transaction sign
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-
-
-## Verify Ethereum transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/verify \
-  --header 'content-type: application/json' \
-  --data '{
-  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
-  "verified": false,
-  "signing_keys": [
-    {
-      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
-      "path": "m/0/0",
-      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
-      "verified": false
-    }
-  ]
-}'
-```
-
-> Request params expanded form
-
-```json
-{
-  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
-  "signing_keys": [
-    {
-      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
-      "path": "m/0/0",
-      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
-    }
-  ]
-}
-
-```
-
-> Response:
-
-```json
-{
-  "unsigned_tx_hash": "24b8d522989164e74c35c8c8e7be6352d48ddfde1f1c976cd30445ccd1f6c36f",
-  "verified": true,
-  "signing_keys": [
-    {
-      "child_pub": "0274567db16f9ad1f178035f0f818cb18765bc7c21c012e00eb8490fbbb88fcc6f",
-      "path": "m/0/0",
-      "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729",
-      "verified": true
-    }
-  ]
-}
-```
-
-This endpoint verifies the signatures in the transaction.
-
-### HTTP Request
-
-`POST /credenceapi/v1/ethereum/transaction/verify`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-unsigned_tx_hash | string |  Keccak 256 hashed value of unsigned_tx in ethereum transaction create | No
-signing_keys | [[signing_key]](#ethereum-signing-key-for-transaction-verify) | An array of sign parts. Detailed description of sign parts is given below | No
-
-### Ethereum Signing Key for transaction verify
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-path | string | BIP32 Derivation Path | No
-child_pub | string | child public key at the provided derivation path | No
-signature | string | Signature hex generated using the credence sign api | No
-
-## Pack Ethereum transaction
-
-> Request:
-
-```shell
-curl --request POST \
-  --url http://192.168.1.200:5000/credenceapi/v1/ethereum/transaction/pack \
-  --header 'content-type: application/json' \
-  --data '{
-          "nonce": 1,
-          "gas_price": 3000000000,
-          "gas_limit": 21000,
-          "to_address": "b83bb5ddd846124bd837714d0e9862d0c43cddf7",
-          "value": 0,
-          "signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729"
-        }'
-```
-> Request params expanded form:
-
-```json
-{
-  "nonce": 1,
-  "gas_price": 3000000000,
-  "gas_limit": 21000,
-  "to_address": "b83bb5ddd846124bd837714d0e9862d0c43cddf7",
-	"value": 0,
-	"signature": "1C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34B3B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D36729"
-}
-```
-
-> Response:
-
-```json
-{
-  "signed_tx": "F8630184B2D05E0082520894B83BB5DDD846124BD837714D0E9862D0C43CDDF7808029A01C19C35614D36E8B513E53A30C48C4D0DBE052D997FDD178022C89983F82C34BA03B6BB5F3A6657102E9D1C2D2D28CF6E0E957782F72B6FF04D0B3641600C5D367",
-  "verified": false
-}
-```
-
-This endpoint packs the transaction for broadcasting to blockchain.
-
-### HTTP Request
-
-`POST /credenceapi/v1/ethereum/transaction/pack`
-
-### Query Parameters
-
-Parameter | type | Description | Optional
---------- | ---- | ----------- | --------
-nonce | integer | In Ethereum, every transaction has a nonce. The nonce is the number of transactions sent from a given address. | No
-gas_limit | Integer | Gas limit refers to the maximum amount of gas you’re willing to spend on a particular transaction. | No
-gas_price | Integer | Gas is a unit of measuring the computational work of running transactions or smart contracts in the Ethereum network. | No
-to_address | string | Ethereum address to which funds are to be received | No
-value | Integer | Value of Ethereum to send in weis | No
-data | string | Input data of the message call (e.g., imagine you are trying to execute a setter method in your smart contract, the data field would contain the identifier of the setter method and the value that should be passed as parameter).| Yes
-signature | string | Signature hex generated using the credence sign api | No
-
-<!-- # Interactive Console
-
-Interactive console of credence application provides limited functionality as of now. 
-Features available through interactive console are: 
-
-* HD root key generation 
-* Transaction Signing
-
-Interactive console can be accessed via a web browser at 
-
-* base_url/Sign 
-* base_url/RootKeyFunctions -->
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+withdrawal_id | Integer | ID of withdrawal to be finalized | No
+coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
