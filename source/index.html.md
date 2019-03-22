@@ -28,31 +28,83 @@ Traditionally, it has been so difficult to secure these single person / single m
 Multi-signature wallets offer all the flexibility you would expect from a modern Bitcoin address without having to take your bitcoin offline. The Credence API enables you to use multi-signature features in your own applications so you can harness the full flexibility of multiple users, cosigners and state-of-the-art fraud detection services to protect against loss and theft.
 
 
-## Account Setup (INCOMPLETE)
+## Account Setup 
+
+```
+APP_UID=ca93bb64cc41721ad28e45c0b554bc926dba195e8451d5d12bf17d382b1ee4ee  
+APP_SECRET=a9effb7c41e6e2e38b330664b4a64d1aa62287b801317afb70b774c567317797  
+REDIRECT=urn:ietf:wg:oauth:2.0:oob  
+CODE=5e78e6f17f1692b7b76b5da6b3a6e6fe8b0c469d96a6ca09fc140e9cc870c055  
+
+curl -F grant_type=authorization_code \
+-F client_id=$APP_UID \
+-F client_secret=$APP_SECRET \
+-F code=$CODE \
+-F redirect_uri=urn:ietf:wg:oauth:2.0:oob \
+-X POST https://custodian-staging.coinome.com/oauth/token
+```
+
+> The above command returns response which contain access and refresh tokens:
+
+```json
+{
+    "access_token": "2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf",
+    "token_type": "Bearer",
+    "refresh_token": "767377c4e2ba771f431a9bddbb74f8bbf4a47497c7b42ee65137cdcef96430e1",
+    "scope": "public",
+    "created_at": 1544519236
+}
+```
 
 Before you begin, you need to set up an enterprise account by signing up at https://accounts-dev.coinome.com. Generate new APP_UID, APP_SECRET and CODE for use in every api call to Enterprise Wallet API.
+
+Login as user, click on applications on developer options tab under user-> profile
+click on new application to generate APP_UID and APP_SECRET
+click authorize, to reveal CODE
+
+Note: use access_token as DOOR_KEEPER_TOKEN for following requests.
+
+Login as user, click on list hmac auth keys on developer options tab under user-> profile
+click on generate, to get Hmac key and Hmac AccessId  
+
+Note: use UUID as Hmac AccessId and SECRET_KEY as Hmac key for following requests.
 
 # Wallet
 
 Before you can safely send or receive crypto assets using our product you need to set up a multi signature wallet.
 You will be asked to provide root public keys od BIP32 specification. In a typical 2/3 multi signature setup, User and Enterprise Wallet will hold one root private key. A backup key will be also required in case user looses his primary root private.
- 
-TODO: Add more content about why you need 3 root keys. Educate user more about ecdsa keys.
-
+	
 
 ## Create Wallet
 
 
 ```shell
-HTTP_METHOD=POST
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
-SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+HTTP_METHOD=POST  
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets  
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e  
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==  
+CONTENT_TYPE=application/json  
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+MD5=tQHGWqadwmQzxvBwCJ1C8w==  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")  
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,$MD5,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"public_keys": ["xpub661MyMwAqRbcFCpjo8ucHDkLWb8Ba9ahwP2jQa7eR8QgX6KXNNXq595uEA785XJS7NReNS1RyRe7zz7KFS6UZqHSwwdWEcnZExoNmo3T1q6"],"label": "mywallet"}'
+
+
+curl -H "Content-MD5: $MD5" \
+-H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI" \
+-d '{
+    "client_keys": ["xpub661MyMwAqRbcF4ceR3gLXaH4FL48WdnocXxs7pZvwSBkJNMhqRWZA7LUefxjjprdFFhR3nhowFs1fNnQVEMUikxLDUhdY9YMUANyMJGT6Qy"],
+    "label": "mywallet",
+    "signature_type": "multisig-2-of-3",
+    "recovery": false,
+    "recovery_keys": ["xpub661MyMwAqRbcEjTKyonWcwzp8mcuZCqBnLDrf3bJ1cGGNxBnHqgvMWCVBNiwtBbDgokowDDtzYBdF1kqYUVDcC4mPXUwKw2MXQMNvNkCxUU"]
+}'
 
 ```
 
@@ -73,7 +125,7 @@ DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" 
 }
 ```
 
-This endpoint creates a new wallet.
+This endpoint creates a new wallet.	
 
 ### HTTP Request
 
@@ -171,15 +223,22 @@ password | string | BIP39 Passphrase | Yes
 ## Show Wallet  
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/1331612684  
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")  
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
+
 ```
 
 > The above command returns JSON structured like this:
@@ -221,15 +280,22 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## List Wallet
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets   
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")  
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`  
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI" 
+
 ```
 
 > The above command returns JSON structured like this:
@@ -261,6 +327,104 @@ Parameter | Type | Description | Optional
 --------- | ---- | ----------- | --------
 coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin | No
 
+
+## Spending Limits
+
+```shell
+HOST=https://custodian-staging.coinome.com   
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
+CONTENT_TYPE=application/json   
+DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+HTTP_METHOD=POST  
+URI=/api/v1/settings/spending_limits  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+MD5=
+SIGNATURE=
+
+curl "Content-MD5: $MD5" \
+-H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI" \
+-d '{
+    "wallet_id": 2066315408,
+    "limits": [{
+        "category": "per_transaction",
+        "value": 5
+    }, {
+        "category": "per_hour",
+        "value": 10
+    }, {
+        "category": "per_day",
+        "value": 15
+    }]
+}'  
+
+```
+
+> The above command returns JSON structured like this:
+
+```json
+{
+    "data": [{
+        "id": "1",
+        "type": "spending_limit",
+        "attributes": {
+            "wallet_id": 2066315408,
+            "category": "per_transaction",
+            "value": 5,
+            "active": true,
+            "created_at": "2019-02-22T07:32:43.245Z",
+            "updated_at": "2019-02-22T09:16:22.503Z"
+        }
+    }, {
+        "id": "2",
+        "type": "spending_limit",
+        "attributes": {
+            "wallet_id": 2066315408,
+            "category": "per_hour",
+            "value": 10,
+            "active": true,
+            "created_at": "2019-02-22T07:40:51.272Z",
+            "updated_at": "2019-02-22T09:16:22.518Z"
+        }
+    }, {
+        "id": "3",
+        "type": "spending_limit",
+        "attributes": {
+            "wallet_id": 2066315408,
+            "category": "per_day",
+            "value": 15,
+            "active": true,
+            "created_at": "2019-02-22T09:16:22.537Z",
+            "updated_at": "2019-02-22T09:16:22.537Z"
+        }
+    }]
+}  
+```
+
+Users of Enterprise Wallet can set various limits on their wallet for added security and control.
+
+### HTTP Request
+
+`GET /api/v1/:coin_name/wallets/:wallet_id/withdrawals/:withdrawal_id`
+
+### Query Parameters
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+wallet_id | Integer | id of the wallet in which withdrawal has to be generated | No
+limits | [limit] | An array of one or more limit objects. Detailed description of input is given below | No
+
+Parameter | Type | Description | Optional
+--------- | ---- | ----------- | --------
+category | string | Limit can be set for per_transaction, per_day, per_hour | No
+value | integer | Value of currency. Eg: To add a limit of 2 BTC per day, value should be 2 | No
+
+
+
 #Address
 
 Addresses can be created against a wallet(which is explained in the previous section). API's related to address are explained below.
@@ -268,15 +432,21 @@ Addresses can be created against a wallet(which is explained in the previous sec
 ## Create Address
 
 ```shell
-HTTP_METHOD=POST
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/addresses
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=POST    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/1331612684/addresses  
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
 ```
 
 > The above command returns JSON structured like this:
@@ -316,15 +486,22 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## Show Address
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/addresses/79
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/1331612684/addresses/2   
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")  
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
+
 ```
 
 > The above command returns JSON structured like this:
@@ -366,15 +543,22 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## Latest Address 
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/addresses/latest
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/1331612684/addresses/latest   
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
+
 ```
 
 > The above command returns JSON structured like this:
@@ -415,15 +599,22 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## List Addresses
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/addresses
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/11/addresses  
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
+
 ```
 
 > The above command returns JSON structured like this:
@@ -481,15 +672,22 @@ Users can receive funds after setting up wallet and address.
 ## List Deposits
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/deposits
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
-SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
-CONTENT_TYPE=application/json
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/1331612684/deposits    
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==  
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
+
 ```
 
 > The above command returns JSON structured like this:
@@ -533,16 +731,21 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## Show Deposit
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/deposits/15
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com   
+URI=/api/v1/bitcoin/wallets/1331612684/deposits/1    
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
-
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"
 ```
 
 > The above command returns JSON structured like this:
@@ -585,20 +788,34 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 
 # Withdrawals
 
-ADD CONTENT HERE
+Users can withdraw crypto assets securely using Enterprise Wallet. Transactions go through only when the signatures of both user and Enterprise Wallet are present in the transaction.
 
 ## Create Withdrawal
 
 ```shell
-HTTP_METHOD=POST
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/withdrawals
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=POST    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/11/withdrawals    
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+MD5=
+SIGNATURE=`echo -n "$HTTP_METHOD,$CONTENT_TYPE,$MD5,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY | base64`
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"recipient_address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc","amount": 63750,"fee_per_byte": 10}'  
+curl -H "Content-MD5: $MD5" \
+-H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI" \
+-d '{
+    "address": "2MyWWHiwWhNTABASboypdDrAdqfXw8GKbKc",
+    "amount": 63750,
+    "fee_per_byte": 10
+}'  
+
 ```
 
 > The above command returns JSON structured like this:
@@ -740,18 +957,26 @@ sign_parts | [sign_part] | An array of sign parts. | No
 ## Finalize Withdrawal
 
 ```shell
-HTTP_METHOD=POST
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/withdrawals/78/finalize
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
+HTTP_METHOD=POST    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/11/withdrawals/78/finalize    
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
 SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag== 
-CONTENT_TYPE=application/json
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+MD5=
+SIGNATURE=
 
-note: use signed txn data from credence interface as client_signed_txn
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI" \
+-d '{
+    "client_signed_txn": "{\"unsigned_tx\":\"02000000000101B7938D3A068467A4CAAE04871DE84C864B0808D8C4FA8E41F8254E89FEBC7D880100000023220020741FAD10CE1271F53614008BE1D7A69EC5AF10E46158C1881D3510824147DD6DFEFFFFFF0206F900000000000017A91444B499EC242F7A587738F5CF598665526A9D5F34874E1010000000000017A91418282DF53C7E947F4F3E8FC4D62A6C588BBB10F1870000000000\",\"verified\":false,\"sign_parts\":[{\"txid\":\"887dbcfe894e25f8418efac4d808084b864ce81d8704aecaa46784063a8d93b7\",\"vout\":1,\"address\":\"2N3ptgmvmUVywNH7RDm5yu5BzquD9GdQtL8\",\"amount\":\"1120000\",\"sign_hash\":\"C7D5D0CCD7FF90DA9A23CEA5B383771574E6B3A870D5B06ED59FF3DCB9869782\",\"signing_keys\":[{\"child_pub\":\"03208251CA155FB6397D99C23148ABCEEFD0A4F7BDAD0CFAF3FBD0E6C9EA40A9F3\",\"path\":\"m/44/0/11/0/51\",\"signature\":\"3045022100F52FB9785081DBB24D260F1D7F4B34A137706145C554B34DAA3B235FDAA21F35022058BC5B0F6D88C436D74D5AD54F0343CF43D727C4F17ACEDB91A904BED355B89401\",\"verified\":false},{\"child_pub\":\"026E29F28DA14804B4895A235409F2E01806402E4C7BA8D8D1285C858C6AADEDC8\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false},{\"child_pub\":\"02B43CD873507D28BD2F2360E6A7320DC924FD6DE22937915C6E1E49651FEC549F\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false}]}]}"
+}'
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI" -d '{"client_signed_txn": "{\"unsigned_tx\":\"02000000000101B7938D3A068467A4CAAE04871DE84C864B0808D8C4FA8E41F8254E89FEBC7D880100000023220020741FAD10CE1271F53614008BE1D7A69EC5AF10E46158C1881D3510824147DD6DFEFFFFFF0206F900000000000017A91444B499EC242F7A587738F5CF598665526A9D5F34874E1010000000000017A91418282DF53C7E947F4F3E8FC4D62A6C588BBB10F1870000000000\",\"verified\":false,\"sign_parts\":[{\"txid\":\"887dbcfe894e25f8418efac4d808084b864ce81d8704aecaa46784063a8d93b7\",\"vout\":1,\"address\":\"2N3ptgmvmUVywNH7RDm5yu5BzquD9GdQtL8\",\"amount\":\"1120000\",\"sign_hash\":\"C7D5D0CCD7FF90DA9A23CEA5B383771574E6B3A870D5B06ED59FF3DCB9869782\",\"signing_keys\":[{\"child_pub\":\"03208251CA155FB6397D99C23148ABCEEFD0A4F7BDAD0CFAF3FBD0E6C9EA40A9F3\",\"path\":\"m/44/0/11/0/51\",\"signature\":\"3045022100F52FB9785081DBB24D260F1D7F4B34A137706145C554B34DAA3B235FDAA21F35022058BC5B0F6D88C436D74D5AD54F0343CF43D727C4F17ACEDB91A904BED355B89401\",\"verified\":false},{\"child_pub\":\"026E29F28DA14804B4895A235409F2E01806402E4C7BA8D8D1285C858C6AADEDC8\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false},{\"child_pub\":\"02B43CD873507D28BD2F2360E6A7320DC924FD6DE22937915C6E1E49651FEC549F\",\"path\":\"m/44/0/11/0/51\",\"signature\":null,\"verified\":false}]}]}"
-    }'
 ```
 
 > The above command returns JSON structured like this:
@@ -793,15 +1018,23 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## List Withdrawals
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/withdrawals
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
-SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
-CONTENT_TYPE=application/json
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com  
+URI=/api/v1/bitcoin/wallets/11/withdrawals    
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==  
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=
+
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"  
+
 ```
 
 > The above command returns JSON structured like this:
@@ -844,15 +1077,21 @@ coin_name | String | Name of the coin in custodian supported coins. eg: bitcoin 
 ## Show Withdrawals
 
 ```shell
-HTTP_METHOD=GET
-HOST=https://custodian-staging.coinome.com
-URI=/api/v1/bitcoin/wallets/11/withdrawals/78
-UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e
-SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==
-CONTENT_TYPE=application/json
+HTTP_METHOD=GET    
+HOST=https://custodian-staging.coinome.com   
+URI=/api/v1/bitcoin/wallets/11/withdrawals/78      
+UUID=78c28d6b-7d32-4027-a408-5ec3909abc5e   
+SECRET_KEY=zblh3YsDEPlrcGYt1tx1J7Y0q6aPaDrn3oZ77Enf8BCLCDXVjy+t0gf2S2LRacaYDJskyJKeFKVude2TTro3Ag==  
+CONTENT_TYPE=application/json   
 DOOR_KEEPER_TOKEN=2c6bbada11f6c21738deea51c215ba664d6f6a4a707e4e5fdc10161ee2bb6abf  
+DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z")
+SIGNATURE=
 
-DATE=$(TZ=GMT date "+%a, %d %b %Y %T %Z");curl -H "Content-Type: $CONTENT_TYPE" -H "X_AUTHORIZATION: APIAuth $UUID:$(echo -n "$HTTP_METHOD,$CONTENT_TYPE,,$URI,$DATE" | openssl dgst -sha1 -binary -hmac $SECRET_KEY "$@" | base64)" -H "Date: $DATE" -H "Authorization: Bearer $DOOR_KEEPER_TOKEN" -X $HTTP_METHOD "$HOST$URI"  
+curl -H "Content-Type: $CONTENT_TYPE" \
+-H "X_AUTHORIZATION: APIAuth $UUID:$SIGNATURE" \
+-H "Date: $DATE" \
+-H "Authorization: Bearer $DOOR_KEEPER_TOKEN" \
+-X $HTTP_METHOD "$HOST$URI"  
 ```
 
 > The above command returns JSON structured like this:
